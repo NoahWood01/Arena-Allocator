@@ -22,20 +22,21 @@
 // THE SOFTWARE.
 
 #include "mavalloc.h"
+#include <stdlib.h>
 
 enum ALGORITHM algorithmType;
 
 typedef struct _memory
 {
   char descriptor;  //either P for process allocation or H for hole in memory
-  int startAddress;
+  // int startAddress;
   int length;
-  _memory *prev;  //prev _memory block
-  _memory *next;  //next _memory block
-}_memory;
+  struct _memory *prev;  //prev _memory block
+  struct _memory *next;  //next _memory block
+} _memory;
 
-_memory head; //head of linked list NOT SURE THE TYPE
-_memory sentinel = NULL;
+_memory* head; //head of linked list NOT SURE THE TYPE
+_memory* sentinel = NULL;
 
 int mavalloc_init( size_t size, enum ALGORITHM algorithm )
 {
@@ -46,10 +47,10 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
   //else calls malloc
   //should create linked list??
   size_t requested_size = ALIGN4(size);   //code from assignment
-  head = (void*)malloc(requested_size);   //creates memory of requested_size
-  head.next = sentinel;
-  head.descriptor = 'H';
-  head.length = size;       //not sure if size or requested_size;
+  head = (_memory*)malloc(requested_size);   //creates memory of requested_size
+  head->next = sentinel;
+  head->descriptor = 'H';
+  head->length = size;       //not sure if size or requested_size;
   algorithmType = algorithm;  //sets algorithm type
 
   return 0;
@@ -74,29 +75,29 @@ void * mavalloc_alloc( size_t size )
   //FIRST_FIT
   if(algorithmType == 0)
   {
-    while(temp != sentinel)
+    while(traversingNode != sentinel)
     {
-      if(temp.descriptor == P)
+      if(traversingNode->descriptor == 'P')
       {
         //do nothing
       }
       else
       {
         //check if size argument can fit in hole
-        if(temp.length <= size)
+        if(traversingNode->length <= size)
         {
           //suitable location new _memory
-          temp.descriptor = 'P';
-          temp.next = (_memory*)temp.startAddress + size;
+          traversingNode->descriptor = 'P';
+          traversingNode->next = (_memory*)&traversingNode + size;
 
           //new Block will be a hole
-          _memory* newBlock = (_memory*)temp.next;
-          newBlock.descriptor = 'H';
-          newBlock.startAddress = temp.next;
-          newBlock.length = temp.length - size;
-          newBlock.prev = (_memory*)temp.startAddress;
-          newBlock.next = (_memory*)(newBlock.startAddress + newBlock.length);
-          temp.length = size;
+          _memory* newBlock = (_memory*)traversingNode->next;
+          newBlock->descriptor = 'H';
+          // newBlock->startAddress = traversingNode->next;
+          newBlock->length = traversingNode->length - size;
+          newBlock->prev = (_memory*)&traversingNode;
+          newBlock->next = (_memory*)(&newBlock + newBlock->length);
+          traversingNode->length = size;
         }
       }
     }
@@ -131,11 +132,11 @@ int mavalloc_size( )
   _memory* traversingNode = head;
   while(traversingNode != sentinel)
   {
-    if(traversingNode.descriptor == P)
+    if(traversingNode->descriptor == 'P')
     {
       number_of_nodes++;
     }
-    traversingNode = traversingNode.next;
+    traversingNode = traversingNode->next;
   }
   return number_of_nodes;
 }
