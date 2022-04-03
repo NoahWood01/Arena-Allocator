@@ -23,6 +23,7 @@
 
 #include "mavalloc.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 enum ALGORITHM algorithmType;
 
@@ -35,8 +36,8 @@ typedef struct _memory
   struct _memory *next;  //next _memory block
 } _memory;
 
-_memory* head; //head of linked list NOT SURE THE TYPE
 _memory* sentinel = NULL;
+_memory* head; //head of linked list NOT SURE THE TYPE
 
 int mavalloc_init( size_t size, enum ALGORITHM algorithm )
 {
@@ -52,14 +53,16 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
   head->descriptor = 'H';
   head->length = size;       //not sure if size or requested_size;
   algorithmType = algorithm;  //sets algorithm type
-
+  
   return 0;
 }
 
 void mavalloc_destroy( )
 {
   //destroy linked list
+
   free(head);
+  head = sentinel;
   return;
 }
 
@@ -75,7 +78,7 @@ void * mavalloc_alloc( size_t size )
   //FIRST_FIT
   if(algorithmType == 0)
   {
-    while(traversingNode != sentinel)
+    while(traversingNode != sentinel) //traverse linked list
     {
       if(traversingNode->descriptor == 'P')
       {
@@ -84,22 +87,24 @@ void * mavalloc_alloc( size_t size )
       else
       {
         //check if size argument can fit in hole
-        if(traversingNode->length <= size)
+        if(traversingNode->length >= size)
         {
           //suitable location new _memory
           traversingNode->descriptor = 'P';
-          traversingNode->next = (_memory*)&traversingNode + size;
+          traversingNode->next = (_memory*)(traversingNode + size);
 
           //new Block will be a hole
           _memory* newBlock = (_memory*)traversingNode->next;
           newBlock->descriptor = 'H';
           // newBlock->startAddress = traversingNode->next;
           newBlock->length = traversingNode->length - size;
-          newBlock->prev = (_memory*)&traversingNode;
-          newBlock->next = (_memory*)(&newBlock + newBlock->length);
+          newBlock->prev = (_memory*)traversingNode;
+          newBlock->next = (_memory*)(newBlock + newBlock->length);
           traversingNode->length = size;
+          return traversingNode;
         }
       }
+      traversingNode = traversingNode->next;
     }
   }
   //NEXT_FIT
@@ -139,4 +144,19 @@ int mavalloc_size( )
     traversingNode = traversingNode->next;
   }
   return number_of_nodes;
+}
+
+void printList()
+{
+  _memory* traversingNode = head;
+  if(traversingNode == sentinel)
+  {
+    printf("emptylist\n");
+  }
+  while(traversingNode != sentinel)
+  {
+    printf("%x %c %d\n",traversingNode, traversingNode->descriptor,traversingNode->length);
+    traversingNode = traversingNode->next;
+  }
+  printf("\n");
 }
