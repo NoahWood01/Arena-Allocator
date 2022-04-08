@@ -25,19 +25,29 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-enum ALGORITHM algorithmType;
+enum ALGORITHM allocationType;
+
+
+enum TYPE
+{
+  FREE = 0,
+  USED
+};
+
 
 typedef struct _memory
 {
-  char descriptor;  //either P for process allocation or H for hole in memory
-  // int startAddress;
-  int length;
+  size_t size;
+  enum TYPE type;
+  void* arena;
   struct _memory *prev;  //prev _memory block
   struct _memory *next;  //next _memory block
 } _memory;
 
-_memory* sentinel = NULL;
-_memory* head; //head of linked list NOT SURE THE TYPE
+_memory* previous_node = NULL;
+_memory* alloc_list;
+
+void* arena;
 
 int mavalloc_init( size_t size, enum ALGORITHM algorithm )
 {
@@ -47,22 +57,30 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
   }
   //else calls malloc
   //should create linked list??
-  size_t requested_size = ALIGN4(size);   //code from assignment
-  head = (_memory*)malloc(requested_size);   //creates memory of requested_size
-  head->next = sentinel;
-  head->descriptor = 'H';
-  head->length = size;       //not sure if size or requested_size;
-  algorithmType = algorithm;  //sets algorithm type
-  
+  allocationType = algorithm;  //sets algorithm type
+
+  arena = malloc(ALIGN4(size));
+
+
+  alloc_list = (_memory*)malloc(sizeof(_memory));
+
+  alloc_list->arena = arena;
+  alloc_list->size = ALIGN4(size);
+  alloc_list->type = FREE;
+  alloc_list->next = NULL;
+  alloc_list->prev = NULL;
+
+  previous_node = alloc_list;
+  printf("init success\n");
   return 0;
+
 }
 
 void mavalloc_destroy( )
 {
   //destroy linked list
 
-  free(head);
-  head = sentinel;
+  free(arena);
   return;
 }
 
@@ -72,53 +90,129 @@ void * mavalloc_alloc( size_t size )
   //must traverse linked list
 
 
-  _memory* traversingNode = head; //traversing node
+  _memory* traversingNode = alloc_list; //traversing node
 
+  size_t aligned_size = ALIGN4(size);
+
+  if(allocationType != NEXT_FIT)
+  {
+    traversingNode = alloc_list;
+  }
+  else if(allocationType == NEXT_FIT)
+  {
+    traversingNode = previous_node;
+  }
+  else
+  {
+    exit(0);
+  }
 
   //FIRST_FIT
-  if(algorithmType == 0)
+  if(allocationType == FIRST_FIT)
   {
-    while(traversingNode != sentinel) //traverse linked list
+    while(traversingNode != NULL) //traverse linked list
     {
-      if(traversingNode->descriptor == 'P')
+      if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
       {
-        //do nothing
-      }
-      else
-      {
-        //check if size argument can fit in hole
-        if(traversingNode->length >= size)
-        {
-          //suitable location new _memory
-          traversingNode->descriptor = 'P';
-          traversingNode->next = (_memory*)(traversingNode + size);
+        int leftover_size = 0;
 
-          //new Block will be a hole
-          _memory* newBlock = (_memory*)traversingNode->next;
-          newBlock->descriptor = 'H';
-          // newBlock->startAddress = traversingNode->next;
-          newBlock->length = traversingNode->length - size;
-          newBlock->prev = (_memory*)traversingNode;
-          newBlock->next = (_memory*)(newBlock + newBlock->length);
-          traversingNode->length = size;
-          return traversingNode;
+        traversingNode->type = USED;
+        leftover_size = traversingNode->size - aligned_size;
+        traversingNode->size = aligned_size;
+
+        if(leftover_size > 0)
+        {
+          _memory* previous_node = traversingNode->next;
+          _memory* leftover_node = (_memory*)malloc(sizeof(_memory));
+
+          leftover_node->arena = traversingNode->arena + size;
+          leftover_node->type = FREE;
+          leftover_node->size = leftover_size;
+          leftover_node->next = previous_node;
+
+          traversingNode->next = leftover_node;
         }
+        previous_node = traversingNode;
+        return (void*)traversingNode->arena;
       }
       traversingNode = traversingNode->next;
     }
   }
   //NEXT_FIT
-  else if(algorithmType == 1)
+  //should be same functionality of FIRST_FIT until mavalloc_free is called
+  else if(allocationType == NEXT_FIT)
   {
+    while(traversingNode != NULL) //traverse linked list
+    {
+      if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
+      {
+        int leftover_size = 0;
 
+        traversingNode->type = USED;
+        leftover_size = traversingNode->size - aligned_size;
+        traversingNode->size = aligned_size;
+
+        if(leftover_size > 0)
+        {
+          _memory* previous_node = traversingNode->next;
+          _memory* leftover_node = (_memory*)malloc(sizeof(_memory));
+
+          leftover_node->arena = traversingNode->arena + size;
+          leftover_node->type = FREE;
+          leftover_node->size = leftover_size;
+          leftover_node->next = previous_node;
+
+          traversingNode->next = leftover_node;
+        }
+        previous_node = traversingNode;
+        return (void*)traversingNode->arena;
+      }
+      traversingNode = traversingNode->next;
+    }
   }
   //BEST_FIT
-  else if(algorithmType == 2)
+  else if(allocationType == BEST_FIT)
   {
+    _memory* tempAddress = NULL;
+    int leftover_size = 0;
+    while(traversingNode != NULL)
+    {
+      int greatestLeftoverSpace = 0;
+      if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
+      {
 
+        if(traversingNode->size - aligned_size > greatestLeftoverSpace)
+        {
+          greatestLeftoverSpace = traversingNode->size - aligned_size;
+          tempAddress = traversingNode;
+        }
+      }
+      traversingNode = traversingNode->next;
+    }
+    if(tempAddress != NULL)
+    {
+      tempAddress->type = USED;
+      leftover_size = tempAddress->size - aligned_size;
+      tempAddress->size = aligned_size;
+      if(leftover_size > 0)
+      {
+        _memory* previous_node = tempAddress->next;
+        _memory* leftover_node = (_memory*)malloc(sizeof(_memory));
+
+        leftover_node->arena = tempAddress + size;
+        leftover_node->type = FREE;
+        leftover_node->size = leftover_size;
+        leftover_node->next = previous_node;
+
+        (tempAddress)->next = leftover_node;
+
+        previous_node = tempAddress;
+        return (void*)tempAddress->arena;
+      }
+    }
   }
   //WORST_FIT
-  else if(algorithmType == 3)
+  else if(allocationType == WORST_FIT)
   {
 
   }
@@ -134,13 +228,10 @@ void mavalloc_free( void * ptr )
 int mavalloc_size( )
 {
   int number_of_nodes = 0;
-  _memory* traversingNode = head;
-  while(traversingNode != sentinel)
+  _memory* traversingNode = alloc_list;
+  while(traversingNode != NULL)
   {
-    if(traversingNode->descriptor == 'P')
-    {
-      number_of_nodes++;
-    }
+    number_of_nodes++;
     traversingNode = traversingNode->next;
   }
   return number_of_nodes;
@@ -148,14 +239,14 @@ int mavalloc_size( )
 
 void printList()
 {
-  _memory* traversingNode = head;
-  if(traversingNode == sentinel)
+  _memory* traversingNode = alloc_list;
+  if(traversingNode == NULL)
   {
     printf("emptylist\n");
   }
-  while(traversingNode != sentinel)
+  while(traversingNode != NULL)
   {
-    printf("%x %c %d\n",traversingNode, traversingNode->descriptor,traversingNode->length);
+    printf("%x  %d\n",traversingNode,traversingNode->size);
     traversingNode = traversingNode->next;
   }
   printf("\n");
