@@ -269,33 +269,48 @@ void * mavalloc_alloc( size_t size )
 void mavalloc_free( void * ptr )
 {
     _memory* node = alloc_list;
-    printf("ptr = %x\n",ptr);
-    if((void*)node == ptr)
-    {
-        printf("FOUND\n");
-        alloc_list = node->next;
-        free(ptr);
-        return;
-    }
-    else
-    {
-        while(node != NULL)
-        {
-            printf("node = %x\n",(void*)node);
-            if((void*)node->next == ptr)
-            {
-                printf("FOUND\n");
-                _memory* tempNode = node;
-                tempNode = node->next;
-                node->next = ptr;
-                free(ptr);
-                return;
-            }
 
-            node = node->next;
+    while(node != NULL) //traverse alloc_list
+    {
+
+        if(node->arena == ptr)
+        {
+          _memory* tempNode = node; //defaults current node
+          //check for prev is free
+          //if so combine
+          //then check if next is free then combine
+
+          if(node->prev != NULL)
+          {
+            if(node->prev->type == FREE)
+            {
+              //combine free block
+              tempNode = node->prev; //redefines tempNode to be previous node
+              tempNode->size += node->size; //combine size;
+              tempNode->next = node->next;
+
+            }
+          }
+
+          if(node->next != NULL)
+          {
+            node->next->prev = tempNode; //updates next node's link to previous node
+            if(node->next->type == FREE)
+            {
+              tempNode->size += node->next->size;
+              tempNode->next = node->next->next; //combine size
+            }
+          }
+
+          tempNode->type = FREE;
+          printf("freed ptr @ %x\n", ptr);
+          return;
         }
+
+        node = node->next;
+
     }
-    printf("NOT WORKING\n");
+    // printf("NOT WORKING\n");
 
   return;
 }
@@ -321,7 +336,7 @@ void printList()
   }
   while(traversingNode != NULL)
   {
-    printf("%x  %d\n",traversingNode,traversingNode->size);
+    printf("%x  %d %d\n",traversingNode->arena,traversingNode->size, traversingNode->type);
     traversingNode = traversingNode->next;
   }
   printf("\n");
