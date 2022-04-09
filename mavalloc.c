@@ -71,7 +71,7 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
   alloc_list->prev = NULL;
 
   previous_node = alloc_list;
-  printf("init success\n");
+  printf("\ninit success\n");
   return 0;
 
 }
@@ -129,6 +129,7 @@ void * mavalloc_alloc( size_t size )
           leftover_node->type = FREE;
           leftover_node->size = leftover_size;
           leftover_node->next = previous_node;
+          leftover_node->prev= traversingNode;
 
           traversingNode->next = leftover_node;
         }
@@ -142,6 +143,11 @@ void * mavalloc_alloc( size_t size )
   //should be same functionality of FIRST_FIT until mavalloc_free is called
   else if(allocationType == NEXT_FIT)
   {
+      // if no previous_node start at begining
+      if(previous_node == NULL)
+      {
+          traversingNode = alloc_list;
+      }
     while(traversingNode != NULL) //traverse linked list
     {
       if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
@@ -161,6 +167,7 @@ void * mavalloc_alloc( size_t size )
           leftover_node->type = FREE;
           leftover_node->size = leftover_size;
           leftover_node->next = previous_node;
+          leftover_node->prev= traversingNode;
 
           traversingNode->next = leftover_node;
         }
@@ -175,13 +182,13 @@ void * mavalloc_alloc( size_t size )
   {
     _memory* tempAddress = NULL;
     int leftover_size = 0;
+    int greatestLeftoverSpace = 2147483627;
     while(traversingNode != NULL)
     {
-      int greatestLeftoverSpace = 0;
       if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
       {
 
-        if(traversingNode->size - aligned_size > greatestLeftoverSpace)
+        if(traversingNode->size - aligned_size < greatestLeftoverSpace)
         {
           greatestLeftoverSpace = traversingNode->size - aligned_size;
           tempAddress = traversingNode;
@@ -203,6 +210,7 @@ void * mavalloc_alloc( size_t size )
         leftover_node->type = FREE;
         leftover_node->size = leftover_size;
         leftover_node->next = previous_node;
+        leftover_node->prev= traversingNode;
 
         (tempAddress)->next = leftover_node;
 
@@ -214,7 +222,45 @@ void * mavalloc_alloc( size_t size )
   //WORST_FIT
   else if(allocationType == WORST_FIT)
   {
+      _memory* tempAddress = NULL;
+      int leftover_size = 0;
+      int greatestLeftoverSpace = 0;
+      while(traversingNode != NULL)
+      {
+        if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
+        {
+          if(traversingNode->size - aligned_size > greatestLeftoverSpace)
+          {
+            greatestLeftoverSpace = traversingNode->size - aligned_size;
+            tempAddress = traversingNode;
+          }
+        }
+        traversingNode = traversingNode->next;
+      }
+      if(tempAddress != NULL)
+      {
 
+        tempAddress->type = USED;
+        leftover_size = tempAddress->size - aligned_size;
+        tempAddress->size = aligned_size;
+        if(leftover_size > 0)
+        {
+          _memory* previous_node = tempAddress->next;
+          _memory* leftover_node = (_memory*)malloc(sizeof(_memory));
+
+          leftover_node->arena = tempAddress + size;
+          leftover_node->type = FREE;
+          leftover_node->size = leftover_size;
+          leftover_node->next = previous_node;
+          leftover_node->prev= traversingNode;
+
+          (tempAddress)->next = leftover_node;
+
+          previous_node = tempAddress;
+          printf("POOPOO\n");
+          return (void*)tempAddress->arena;
+        }
+      }
   }
   // only return NULL on failure
   return NULL;
@@ -222,6 +268,35 @@ void * mavalloc_alloc( size_t size )
 
 void mavalloc_free( void * ptr )
 {
+    _memory* node = alloc_list;
+    printf("ptr = %x\n",ptr);
+    if((void*)node == ptr)
+    {
+        printf("FOUND\n");
+        alloc_list = node->next;
+        free(ptr);
+        return;
+    }
+    else
+    {
+        while(node != NULL)
+        {
+            printf("node = %x\n",(void*)node);
+            if((void*)node->next == ptr)
+            {
+                printf("FOUND\n");
+                _memory* tempNode = node;
+                tempNode = node->next;
+                node->next = ptr;
+                free(ptr);
+                return;
+            }
+
+            node = node->next;
+        }
+    }
+    printf("NOT WORKING\n");
+
   return;
 }
 
