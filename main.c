@@ -498,6 +498,7 @@ int test_case_15()
 *
 * TEST CASE 16: Test Worst Fit and using the memory we were given
 *
+*/
 
 int test_case_16()
 {
@@ -520,7 +521,7 @@ printf("POOP\n");
   mavalloc_destroy( );
   printf("POOP\n");
   return 1;
-}*/
+}
 
 /*
 *

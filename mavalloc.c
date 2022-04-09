@@ -79,7 +79,14 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
 void mavalloc_destroy( )
 {
   //destroy linked list
-
+  _memory* node = alloc_list;
+  alloc_list = NULL;
+  while(node != NULL) //traverse alloc_list
+  {
+      _memory* temp = node->next;
+      free(node);
+      node = temp;
+  }
   free(arena);
   return;
 }
@@ -148,7 +155,8 @@ void * mavalloc_alloc( size_t size )
       {
           traversingNode = alloc_list;
       }
-    while(traversingNode != NULL) //traverse linked list
+      _memory* start = traversingNode;
+    do //traverse linked list
     {
       if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
       {
@@ -173,9 +181,16 @@ void * mavalloc_alloc( size_t size )
         }
         previous_node = traversingNode;
         return (void*)traversingNode->arena;
+        }
+      if(traversingNode->next == NULL)
+      {
+          traversingNode = alloc_list;
       }
-      traversingNode = traversingNode->next;
-    }
+      else
+      {
+          traversingNode = traversingNode->next;
+      }
+    }while(traversingNode != start);
   }
   //BEST_FIT
   else if(allocationType == BEST_FIT)
@@ -215,8 +230,9 @@ void * mavalloc_alloc( size_t size )
         (tempAddress)->next = leftover_node;
 
         previous_node = tempAddress;
-        return (void*)tempAddress->arena;
+
       }
+      return (void*)tempAddress->arena;
     }
   }
   //WORST_FIT
@@ -229,16 +245,18 @@ void * mavalloc_alloc( size_t size )
       {
         if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
         {
-          if(traversingNode->size - aligned_size > greatestLeftoverSpace)
+          if(traversingNode->size - aligned_size >= greatestLeftoverSpace)
           {
             greatestLeftoverSpace = traversingNode->size - aligned_size;
             tempAddress = traversingNode;
+
           }
         }
         traversingNode = traversingNode->next;
       }
       if(tempAddress != NULL)
       {
+         // printf("%d\n",greatestLeftoverSpace);
 
         tempAddress->type = USED;
         leftover_size = tempAddress->size - aligned_size;
@@ -257,9 +275,11 @@ void * mavalloc_alloc( size_t size )
           (tempAddress)->next = leftover_node;
 
           previous_node = tempAddress;
-          printf("POOPOO\n");
-          return (void*)tempAddress->arena;
+
+
         }
+        //printList();
+        return (void*)tempAddress->arena;
       }
   }
   // only return NULL on failure
@@ -301,7 +321,7 @@ void mavalloc_free( void * ptr )
               tempNode->next = node->next->next; //combine size
             }
           }
-
+          //free(ptr);
           tempNode->type = FREE;
           printf("freed ptr @ %x\n", ptr);
           return;
@@ -311,7 +331,6 @@ void mavalloc_free( void * ptr )
 
     }
     // printf("NOT WORKING\n");
-
   return;
 }
 
