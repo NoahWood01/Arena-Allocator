@@ -59,9 +59,10 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
   //should create linked list??
   allocationType = algorithm;  //sets algorithm type
 
+  // get allgned size
   arena = malloc(ALIGN4(size));
 
-
+  // allocate the head to the entire memory space
   alloc_list = (_memory*)malloc(sizeof(_memory));
 
   alloc_list->arena = arena;
@@ -71,9 +72,7 @@ int mavalloc_init( size_t size, enum ALGORITHM algorithm )
   alloc_list->prev = NULL;
 
   previous_node = alloc_list;
-  printf("\ninit success\n");
   return 0;
-
 }
 
 void mavalloc_destroy( )
@@ -101,6 +100,7 @@ void * mavalloc_alloc( size_t size )
 
   size_t aligned_size = ALIGN4(size);
 
+  // if next fit get previous traversed node
   if(allocationType != NEXT_FIT)
   {
     traversingNode = alloc_list;
@@ -119,14 +119,17 @@ void * mavalloc_alloc( size_t size )
   {
     while(traversingNode != NULL) //traverse linked list
     {
+        // open node for size needed
       if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
       {
+        // allocate for node
         int leftover_size = 0;
 
         traversingNode->type = USED;
         leftover_size = traversingNode->size - aligned_size;
         traversingNode->size = aligned_size;
 
+        // turn left over space into new node
         if(leftover_size > 0)
         {
           _memory* previous_node = traversingNode->next;
@@ -156,16 +159,18 @@ void * mavalloc_alloc( size_t size )
           traversingNode = alloc_list;
       }
       _memory* start = traversingNode;
-    do //traverse linked list
+    do //traverse linked list but start with last node traversed and end there
     {
       if(traversingNode->size >= aligned_size && traversingNode->type == FREE)
       {
+          // allocate for node
         int leftover_size = 0;
 
         traversingNode->type = USED;
         leftover_size = traversingNode->size - aligned_size;
         traversingNode->size = aligned_size;
 
+        // turn left over space into new node
         if(leftover_size > 0)
         {
           _memory* previous_node = traversingNode->next;
@@ -195,6 +200,7 @@ void * mavalloc_alloc( size_t size )
   //BEST_FIT
   else if(allocationType == BEST_FIT)
   {
+      // temp will hold current winner
     _memory* tempAddress = NULL;
     int leftover_size = 0;
     int greatestLeftoverSpace = 2147483627;
@@ -205,6 +211,7 @@ void * mavalloc_alloc( size_t size )
 
         if(traversingNode->size - aligned_size < greatestLeftoverSpace)
         {
+            // store current winner
           greatestLeftoverSpace = traversingNode->size - aligned_size;
           tempAddress = traversingNode;
         }
@@ -213,15 +220,18 @@ void * mavalloc_alloc( size_t size )
     }
     if(tempAddress != NULL)
     {
+        // allocate for node
       tempAddress->type = USED;
       leftover_size = tempAddress->size - aligned_size;
       tempAddress->size = aligned_size;
+
+      // turn left over space into new node
       if(leftover_size > 0)
       {
         _memory* previous_node = tempAddress->next;
         _memory* leftover_node = (_memory*)malloc(sizeof(_memory));
 
-        leftover_node->arena = tempAddress + size;
+        leftover_node->arena = tempAddress->arena + size;
         leftover_node->type = FREE;
         leftover_node->size = leftover_size;
         leftover_node->next = previous_node;
@@ -238,6 +248,7 @@ void * mavalloc_alloc( size_t size )
   //WORST_FIT
   else if(allocationType == WORST_FIT)
   {
+      // temp will hold current winner
       _memory* tempAddress = NULL;
       int leftover_size = 0;
       int greatestLeftoverSpace = 0;
@@ -247,26 +258,27 @@ void * mavalloc_alloc( size_t size )
         {
           if(traversingNode->size - aligned_size >= greatestLeftoverSpace)
           {
+              // store current winner
             greatestLeftoverSpace = traversingNode->size - aligned_size;
             tempAddress = traversingNode;
-
           }
         }
         traversingNode = traversingNode->next;
       }
       if(tempAddress != NULL)
       {
-         // printf("%d\n",greatestLeftoverSpace);
-
+          // allocate for node
         tempAddress->type = USED;
         leftover_size = tempAddress->size - aligned_size;
         tempAddress->size = aligned_size;
+
+        // turn left over space into new node
         if(leftover_size > 0)
         {
           _memory* previous_node = tempAddress->next;
           _memory* leftover_node = (_memory*)malloc(sizeof(_memory));
 
-          leftover_node->arena = tempAddress + size;
+          leftover_node->arena = tempAddress->arena + size;
           leftover_node->type = FREE;
           leftover_node->size = leftover_size;
           leftover_node->next = previous_node;
@@ -275,10 +287,7 @@ void * mavalloc_alloc( size_t size )
           (tempAddress)->next = leftover_node;
 
           previous_node = tempAddress;
-
-
         }
-        //printList();
         return (void*)tempAddress->arena;
       }
   }
@@ -323,14 +332,10 @@ void mavalloc_free( void * ptr )
           }
           //free(ptr);
           tempNode->type = FREE;
-          printf("freed ptr @ %x\n", ptr);
           return;
         }
-
         node = node->next;
-
     }
-    // printf("NOT WORKING\n");
   return;
 }
 
@@ -338,9 +343,11 @@ int mavalloc_size( )
 {
   int number_of_nodes = 0;
   _memory* traversingNode = alloc_list;
+  // traverse until end of list
   while(traversingNode != NULL)
   {
     number_of_nodes++;
+    // get next in list
     traversingNode = traversingNode->next;
   }
   return number_of_nodes;
@@ -349,10 +356,12 @@ int mavalloc_size( )
 void printList()
 {
   _memory* traversingNode = alloc_list;
+  // if null then list will be empty
   if(traversingNode == NULL)
   {
     printf("emptylist\n");
   }
+  //traverse until end of list
   while(traversingNode != NULL)
   {
     printf("%x  %d %d\n",traversingNode->arena,traversingNode->size, traversingNode->type);

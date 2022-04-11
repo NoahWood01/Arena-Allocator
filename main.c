@@ -44,8 +44,7 @@ int test_case_2()
 
   // If you failed here your allocation on line 38 failed
   TINYTEST_ASSERT( ptr2 );
-printf("ptr1 = %x\n",ptr1);
-printf("ptr2 = %x\n",ptr2);
+
   mavalloc_free( ptr1 );
   mavalloc_free( ptr2 );
 
@@ -512,14 +511,14 @@ int test_case_16()
 
   // If you fail here then your allocation on line 476 failed
   TINYTEST_ASSERT( ptr2 );
-printf("POOP\n");
+
   memcpy( ptr2, "THIS IS THE TEST STRING", 23);
-printf("POOP\n");
+
   int compare = memcmp( ptr2, "THIS IS THE TEST STRING", 23 );
 
   TINYTEST_EQUAL( compare, 0);
   mavalloc_destroy( );
-  printf("POOP\n");
+
   return 1;
 }
 
@@ -675,7 +674,7 @@ TINYTEST_START_SUITE(MavAllocTestSuite);
   TINYTEST_ADD_TEST(test_case_13,tinytest_setup,tinytest_teardown);
   TINYTEST_ADD_TEST(test_case_14,tinytest_setup,tinytest_teardown);
   TINYTEST_ADD_TEST(test_case_15,tinytest_setup,tinytest_teardown);
-  //TINYTEST_ADD_TEST(test_case_16,tinytest_setup,tinytest_teardown);
+  TINYTEST_ADD_TEST(test_case_16,tinytest_setup,tinytest_teardown);
   TINYTEST_ADD_TEST(test_case_17,tinytest_setup,tinytest_teardown);
   TINYTEST_ADD_TEST(test_case_18,tinytest_setup,tinytest_teardown);
   TINYTEST_ADD_TEST(test_case_19,tinytest_setup,tinytest_teardown);

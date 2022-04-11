@@ -1,10 +1,10 @@
 CC=       	gcc
 CFLAGS= 	-g -gdwarf-2 -std=gnu99 -Wall -lmavalloc
-CLFLAGS= 	-g -gdwarf-2 -std=gnu99 -Wall 
+CLFLAGS= 	-g -gdwarf-2 -std=gnu99 -Wall
 LDFLAGS=
 LIBRARIES=      lib/libmavalloc.a
 
-all:   unit_test 
+all:   unit_test
 
 unit_test: main.o libmavalloc.a
 	gcc -o unit_test main.o -L. -lmavalloc
