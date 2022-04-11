@@ -8,6 +8,7 @@ Test cases are found in main.c
 
 From the command line
 
-```make all
+```
+make all
 ./unit_test
 ```
